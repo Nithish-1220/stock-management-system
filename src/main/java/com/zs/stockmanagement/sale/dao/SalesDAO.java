@@ -3,6 +3,7 @@ package com.zs.stockmanagement.sale.dao;
 import com.zs.stockmanagement.sale.model.Sale;
 import com.zs.stockmanagement.sale.model.SaleItem;
 import com.zs.stockmanagement.utils.DBController;
+import org.glassfish.grizzly.http.util.TimeStamp;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -110,6 +111,7 @@ public class SalesDAO {
         String decreaseStockQuery = "UPDATE inventory SET quantity = quantity - ? WHERE variant_id = ? AND branch_id = ? AND quantity >= ?";
         String insertSale = "INSERT INTO sales_bill(branch_id, customer_id, total_amount) VALUES (?,?,?)";
         String insertItem = "INSERT INTO sales_item (sales_id, variant_id, quantity, selling_price, total_amount) VALUES (?,?,?,?,?)";
+        String getDateQuery = "select date_time from sales_bill where sales_id = ?;";
 
         try (Connection connection = DBController.getConnection()) {
             connection.setAutoCommit(false);
@@ -168,8 +170,17 @@ public class SalesDAO {
                     salesItemPs.executeBatch();
                 }
 
+                try(PreparedStatement getDatePs = connection.prepareStatement(getDateQuery)){
+                    getDatePs.setInt(1,saleId);
+                    ResultSet getDateRs = getDatePs.executeQuery();
+                    while(getDateRs.next()){
+                        sale.setDateTime(getDateRs.getTimestamp("date_time").toLocalDateTime());
+                    }
+                }
+
                 connection.commit();
                 sale.setSaleId(saleId);
+
                 return sale;
 
             } catch (Exception e) {
