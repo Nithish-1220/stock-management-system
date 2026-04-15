@@ -1,13 +1,17 @@
 package com.zs.stockmanagement.purchase.model;
 
 public class PurchaseItem {
+    private int productId;
+    private String productName;
     private int variantId;
     private int quantity;
     private double costPrice;
     private double totalAmount;
 
 
-    public PurchaseItem( int variantId, int quantity,double costPrice,double totalAmount) {
+    public PurchaseItem(int productId,String productName, int variantId, int quantity,double costPrice,double totalAmount) {
+        this.productId = productId;
+        this.productName = productName;
         this.variantId = variantId;
         this.quantity = quantity;
         this.costPrice = costPrice;
@@ -24,8 +28,22 @@ public class PurchaseItem {
                 '}';
     }
 
-    public PurchaseItem() {
+    public PurchaseItem() {}
 
+    public int getProductId() {
+        return productId;
+    }
+
+    public void setProductId(int productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
     }
 
     public double getCostPrice() {

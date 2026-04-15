@@ -1,12 +1,16 @@
 package com.zs.stockmanagement.purchase.dto;
 
 public class RequestPurchaseItem {
+    private int productId;
+    private String productName;
     private int variantId;
     private int quantity;
     private double costPrice;
     private double totalAmount;
 
-    public RequestPurchaseItem(double costPrice, int quantity, double totalAmount, int variantId) {
+    public RequestPurchaseItem(int productId,String productName,double costPrice, int quantity, double totalAmount, int variantId) {
+        this.productId = productId;
+        this.productName = productName;
         this.costPrice = costPrice;
         this.quantity = quantity;
         this.totalAmount = totalAmount;
@@ -26,6 +30,22 @@ public class RequestPurchaseItem {
 
     public RequestPurchaseItem() {
 
+    }
+
+    public int getProductId() {
+        return productId;
+    }
+
+    public void setProductId(int productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
     }
 
     public double getCostPrice() {

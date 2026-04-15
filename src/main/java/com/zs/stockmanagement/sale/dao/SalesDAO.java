@@ -1,5 +1,6 @@
 package com.zs.stockmanagement.sale.dao;
 
+import com.zs.stockmanagement.exceptions.DataBaseException;
 import com.zs.stockmanagement.sale.model.Sale;
 import com.zs.stockmanagement.sale.model.SaleItem;
 import com.zs.stockmanagement.utils.DBController;
@@ -14,9 +15,11 @@ public class SalesDAO {
     public List<Sale> getSales(int shopId, int branchId) {
         String salesQuery = "select sales_id, date_time, customer_id,total_amount from sales_bill sb  " +
                 "join branches b on sb.branch_id = b.branch_id " +
-                "where b.shop_id = ? And b.branch_id = ? ;";
+                "where b.shop_id = ? And b.branch_id = ?  AND status = 'active';";
 
-        String salesItem = "select variant_id, quantity, selling_price, total_amount from sales_item where sales_id=?;";
+        String salesItem = """
+                select p.product_id,p.product_name,si.variant_id, si.quantity, si.selling_price, si.total_amount from sales_item si join variants v on si.variant_id = v.variant_id join products p on v.product_id = p.product_id where sales_id=?;
+                """;
 
         try (Connection connection = DBController.getConnection();
              PreparedStatement salesPs = connection.prepareStatement(salesQuery)) {
@@ -39,6 +42,8 @@ public class SalesDAO {
                         try (ResultSet salesItemRs = saleItemPs.executeQuery()) {
                             while (salesItemRs.next()) {
                                 SaleItem item = new SaleItem();
+                                item.setProductId(salesItemRs.getInt("product_id"));
+                                item.setProductName(salesItemRs.getString("product_name"));
                                 item.setVariantId(salesItemRs.getInt("variant_id"));
                                 item.setQuantity(salesItemRs.getInt("quantity"));
                                 item.setSellingPrice(salesItemRs.getDouble("selling_price"));
@@ -60,7 +65,7 @@ public class SalesDAO {
     public Sale getSales(int shopId, int branchId, int salesId) {
         String salesQuery = "select sales_id, date_time, customer_id,total_amount from sales_bill sb  " +
                 "join branches b on sb.branch_id = b.branch_id " +
-                "where b.shop_id = ? And b.branch_id = ? AND sales_id = ? ;";
+                "where b.shop_id = ? And b.branch_id = ? AND sales_id = ? AND status='active';";
 
         String salesItem = "select variant_id, quantity, selling_price, total_amount from sales_item where sales_id=?;";
 
@@ -215,12 +220,12 @@ public class SalesDAO {
                         }
                     }
                 }
-
                 try (PreparedStatement reversePs = connection.prepareStatement(reverseStockQuery)) {
                     reversePs.setInt(1, saleId);
                     reversePs.setInt(2, branchId);
                     reversePs.executeUpdate();
                 }
+
 
                 try (PreparedStatement cancelPs = connection.prepareStatement(cancelPurchaseQuery)) {
                     cancelPs.setInt(1, saleId);
@@ -238,14 +243,12 @@ public class SalesDAO {
 
             } catch (Exception e) {
                 connection.rollback();
-                System.err.println(e.getMessage());
-                return false;
+                throw new DataBaseException(e.getMessage());
             } finally {
                 connection.setAutoCommit(true);
             }
         } catch (Exception e) {
-            System.err.println(e.getMessage());
-            return false;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -335,14 +338,12 @@ public class SalesDAO {
 
             } catch (Exception e) {
                 connection.rollback();
-                System.err.println(e.getMessage());
-                return false;
+                throw new DataBaseException(e.getMessage());
             } finally {
                 connection.setAutoCommit(true);
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return false;
+            throw new DataBaseException(e.getMessage());
         }
     }
 }

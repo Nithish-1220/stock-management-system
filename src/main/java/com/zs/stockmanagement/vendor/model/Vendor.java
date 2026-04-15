@@ -19,6 +19,12 @@ public class Vendor {
 
     }
 
+    public Vendor(Address address, String vendorName, String vendorPhoneNumber) {
+        this.vendorAddress = address;
+        this.vendorName = vendorName;
+        this.vendorPhoneNumber = vendorPhoneNumber;
+    }
+
     public Address getVendorAddress() {
         return vendorAddress;
     }

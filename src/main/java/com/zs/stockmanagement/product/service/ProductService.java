@@ -15,7 +15,9 @@ public class ProductService {
 
 
     public List<Product> getProducts(int shopId, int branchId) {
+
         return productDAO.getProducts(shopId, branchId);
+
     }
 
     public Product getProduct(int shopId, int branchId, int productId) {

@@ -1,8 +1,9 @@
 package com.zs.stockmanagement.vendor.dao;
 
 import com.zs.stockmanagement.address.model.Address;
-import com.zs.stockmanagement.vendor.model.Vendor;
+import com.zs.stockmanagement.exceptions.DataBaseException;
 import com.zs.stockmanagement.utils.DBController;
+import com.zs.stockmanagement.vendor.model.Vendor;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -48,11 +49,9 @@ public class VendorDAO {
             return vendors;
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
-
 
     public Vendor getVendors(int vendorId) {
         String vendorQuery = "select v.vendor_id, v.vendor_name,v.vendor_phone_number,a.address_id, a.door_number, a.street_name, a.city_name, a.city_type, s.state_name, c.country_name, p.pincode_number " +
@@ -91,38 +90,130 @@ public class VendorDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
-    //TODO addVendor
-    public Vendor addVendor(){
-        return  null;
+    public Vendor addVendor(Vendor vendor) {
+        String insertQuery = "insert into vendors(vendor_name, address_id, vendor_phone_number)  values(?,?,?);";
+        Integer vendorId = null;
+        try (Connection connection = DBController.getConnection()) {
+
+            try (PreparedStatement insertPs = connection.prepareStatement(insertQuery, PreparedStatement.RETURN_GENERATED_KEYS)) {
+                insertPs.setString(1, vendor.getVendorName());
+                insertPs.setInt(2, vendor.getVendorAddress().getAddressId());
+                insertPs.setString(3, vendor.getVendorPhoneNumber());
+                insertPs.executeUpdate();
+                try (ResultSet insertRs = insertPs.getGeneratedKeys()) {
+                    if (insertRs.next()) {
+                        vendorId = insertRs.getInt(1);
+                    } else {
+                        throw new RuntimeException("vendor Id is null");
+                    }
+                }
+            }
+            vendor.setVendorId(vendorId);
+            return vendor;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     //TODO addVendors
-    public List<Vendor> addVendors(){
+    public List<Vendor> addVendors() {
         return null;
     }
 
     //TODO deleteVendor
-    public boolean deleteVendor(){
-        return false;
+    public boolean deleteVendor(int vendorId) {
+        String getAddressQuery = "select address_id from vendors where vendor_id = ?;";
+        String vendorQuery = "delete from vendors where vendor_id = ?;";
+        String deleteAddressQuery = "delete from address where address_id = ?";
+
+        try (Connection connection = DBController.getConnection()) {
+            connection.setAutoCommit(false);
+
+            try {
+                Integer addressId = null;
+                try (PreparedStatement addressPs = connection.prepareStatement(getAddressQuery)) {
+                    addressPs.setInt(1, vendorId);
+                    try (ResultSet addressRs = addressPs.executeQuery()) {
+                        if (addressRs.next()) {
+                            addressId = addressRs.getInt("address_id");
+                        }
+                    }
+                }
+
+                try (PreparedStatement vendorPs = connection.prepareStatement(vendorQuery)) {
+                    vendorPs.setInt(1, vendorId);
+                    vendorPs.executeUpdate();
+                }
+
+                if (addressId != null) {
+                    try (PreparedStatement deleteAddresses = connection.prepareStatement(deleteAddressQuery)) {
+                        deleteAddresses.setInt(1, addressId);
+                        deleteAddresses.executeUpdate();
+                    }
+                }
+                connection.commit();
+                return true;
+
+            } catch (SQLException e) {
+                connection.rollback();
+                throw new DataBaseException(e.getMessage());
+            } finally {
+                connection.setAutoCommit(true);
+            }
+
+        } catch (SQLException e) {
+            throw new DataBaseException(e.getMessage());
+        }
     }
 
     //Todo getVendors by corresponding shop_id and branch_id
-    public List<Vendor> getVendors(int shopId,int branchId){
+    public List<Vendor> getVendors(int shopId, int branchId) {
         return null;
     }
 
     //Todo getVendors by corresponding shop_id and branch_id and vendorId
-    public Vendor getVendors(int shopId,int branchId,int vendorId){
+    public Vendor getVendors(int shopId, int branchId, int vendorId) {
         return null;
     }
 
-    //TODO update vendor with shop_id,branch_id,vendor_id,data
-    public Vendor updateVendor(){
-        return null;
+    public void updateVendor(Vendor vendor) {
+
+        StringBuilder query = new StringBuilder("UPDATE vendors SET ");
+        List<Object> values = new ArrayList<>();
+
+        if (vendor.getVendorName() != null) {
+            query.append("vendor_name = ?, ");
+            values.add(vendor.getVendorName());
+        }
+
+        if (vendor.getVendorPhoneNumber() != null) {
+            query.append("vendor_phone_number = ?, ");
+            values.add(vendor.getVendorPhoneNumber());
+        }
+
+        if (values.isEmpty()) {
+            return;
+        }
+        query.setLength(query.length() - 2);
+
+        query.append(" WHERE vendor_id = ?");
+        values.add(vendor.getVendorId());
+
+        try (Connection connection = DBController.getConnection();
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+
+            for (int i = 0; i < values.size(); i++) {
+                ps.setObject(i + 1, values.get(i));
+            }
+
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DataBaseException(e.getMessage());
+        }
     }
 }

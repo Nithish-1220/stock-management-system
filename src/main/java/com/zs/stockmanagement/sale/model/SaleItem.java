@@ -1,10 +1,24 @@
 package com.zs.stockmanagement.sale.model;
 
 public class SaleItem {
+    private Integer productId;
+    private String productName;
     private int variantId;
     private int quantity;
     private double sellingPrice;
     private double totalAmount;
+
+    public SaleItem(Integer productId,String productName,int variantId, double sellingPrice, int quantity, double totalAmount) {
+        this.productId = productId;
+        this.productName = productName;
+        this.quantity = quantity;
+        this.sellingPrice = sellingPrice;
+        this.totalAmount = totalAmount;
+        this.variantId = variantId;
+    }
+
+    public SaleItem() {
+    }
 
     public SaleItem(int variantId, double sellingPrice, int quantity, double totalAmount) {
         this.quantity = quantity;
@@ -13,7 +27,20 @@ public class SaleItem {
         this.variantId = variantId;
     }
 
-    public SaleItem() {
+    public Integer getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Integer productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
     }
 
     public int getQuantity() {

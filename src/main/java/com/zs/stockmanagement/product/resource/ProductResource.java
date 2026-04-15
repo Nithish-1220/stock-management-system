@@ -1,17 +1,13 @@
 package com.zs.stockmanagement.product.resource;
 
-import com.zs.stockmanagement.product.dto.AddProductRequest;
-import com.zs.stockmanagement.product.dto.RequestProduct;
-import com.zs.stockmanagement.product.dto.RequestVariant;
+import com.zs.stockmanagement.product.dto.*;
 import com.zs.stockmanagement.product.model.Product;
 import com.zs.stockmanagement.product.model.Variant;
-import com.zs.stockmanagement.product.service.ProductService;
-import com.zs.stockmanagement.product.dto.LowStockProductResponse;
-import com.zs.stockmanagement.product.dto.ProductFlowResponse;
-import com.zs.stockmanagement.product.dto.TopProductResponse;
 import com.zs.stockmanagement.product.service.ProductFlowService;
+import com.zs.stockmanagement.product.service.ProductService;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import java.util.List;
 
@@ -20,94 +16,120 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 public class ProductResource {
     private final ProductService productService;
+    ProductFlowService service;
     private final int shopId;
     private final int branchId;
 
     public ProductResource(int shopId, int branchId) {
         productService = new ProductService();
-        this.shopId=shopId;
+        service = new ProductFlowService();
+        this.shopId = shopId;
         this.branchId = branchId;
     }
 
     @GET
-    public List<Product> getProducts(){
-        return productService.getProducts(shopId,branchId);
+    public Response getProducts() {
+        List<Product> result = productService.getProducts(shopId, branchId);
+        return Response.ok(result).build();
     }
 
     @GET
     @Path("/{product_id}")
-    public Product getProduct(@PathParam("product_id") int productId){
-        return productService.getProduct(shopId,branchId,productId);
+    public Response getProduct(@PathParam("product_id") int productId) {
+        Product product = productService.getProduct(shopId, branchId, productId);
+        return Response.ok(product).build();
     }
 
     @GET
     @Path("/{product_id}/variants")
-    public List<Variant> getVariants(@PathParam("product_id") int productId){
-        return productService.getVariants(shopId,branchId,productId);
+    public List<Variant> getVariants(@PathParam("product_id") int productId) {
+        return productService.getVariants(shopId, branchId, productId);
     }
 
     @GET
     @Path("/{product_id}/variants/{variant_id}")
-    public Variant getVariant(@PathParam("product_id") int productId,@PathParam("variant_id") int variantId){
-        return productService.getVariant(shopId,branchId,productId,variantId);
+    public Variant getVariant(@PathParam("product_id") int productId, @PathParam("variant_id") int variantId) {
+        return productService.getVariant(shopId, branchId, productId, variantId);
     }
 
     @POST
-    public Product addProduct(AddProductRequest request){
-        return productService.addProduct(shopId,branchId,request.getProduct(),request.getVariants());
+    public Response addProduct(AddProductRequest request) {
+        Product result = productService.addProduct(shopId, branchId, request.getProduct(), request.getVariants());
+        return Response.ok(result).build();
     }
 
     @POST
     @Path("/{product_id}/variants")
-    public Variant addVariant(@PathParam("product_id") int productId,RequestVariant requestVariant){
-        return productService.addVariant(shopId,branchId,productId,requestVariant);
+    public Response addVariant(@PathParam("product_id") int productId, RequestVariant requestVariant) {
+        Variant result = productService.addVariant(shopId, branchId, productId, requestVariant);
+        return Response.ok(result).build();
     }
 
     @PATCH
     @Path("/{product_id}")
-    public Product updateProduct(@PathParam("product_id") int productId,RequestProduct requestProduct){
-        return productService.updateProduct(shopId,branchId,productId,requestProduct);
+    public Response updateProduct(@PathParam("product_id") int productId, RequestProduct requestProduct) {
+        Product result = productService.updateProduct(shopId, branchId, productId, requestProduct);
+        return Response.ok(result).build();
     }
+
+    @DELETE
+    @Path("/{product_id}")
+    public Response deleteProduct(@PathParam("product_id") int productId) {
+        boolean result = productService.deleteProduct(shopId, branchId, productId);
+        if (result) return Response.status(Response.Status.NO_CONTENT).build();
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
 
     @PATCH
     @Path("/{product_id}/variants/{variant_id}")
-    public Variant updateVariant(@PathParam("product_id") int productId,@PathParam("variant_id") int variantId,RequestVariant requestVariant){
-        return productService.updateVariant(shopId,branchId,productId,variantId,requestVariant);
+    public Response updateVariant(@PathParam("product_id") int productId, @PathParam("variant_id") int variantId, RequestVariant requestVariant) {
+        Variant result = productService.updateVariant(shopId, branchId, productId, variantId, requestVariant);
+        return Response.ok(result).build();
     }
+
+    @DELETE
+    @Path("/{product_id}/variants/{variant_id}")
+    public Response deleteVariant(@PathParam("product_id") int productId, @PathParam("variant_id") int variantId) {
+        boolean result = productService.deleteVariant(shopId, branchId, productId, variantId);
+//        if (result) return Response.status(Response.Status.NO_CONTENT).build();
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
 
     @Path("/flow")
     @GET
-    public List<ProductFlowResponse> getProductFlow() {
-        ProductFlowService service = new ProductFlowService();
-        return service.getProductFlow(shopId, branchId);
+    public Response getProductFlow() {
+        List<ProductFlowResponse> result = service.getProductFlow(shopId, branchId);
+        return Response.ok(result).build();
     }
 
     @Path("{product_id}/flow/")
     @GET
-    public ProductFlowResponse getProductFlow(@PathParam("product_id") int product_id ) {
-        ProductFlowService service = new ProductFlowService();
-        return service.getProductFlowByProductId(shopId, branchId,product_id);
+    public Response getProductFlow(@PathParam("product_id") int product_id) {
+        ProductFlowResponse result = service.getProductFlowByProductId(shopId, branchId, product_id);
+        return Response.ok(result).build();
     }
 
     @Path("{product_id}/variants/{variant_id}/flow/")
     @GET
-    public ProductFlowResponse getProductFlow(@PathParam("product_id") int product_id,@PathParam("variant_id")int variant_id ) {
-        ProductFlowService service = new ProductFlowService();
-        return service.getProductFlowByProductAndVariantId(shopId, branchId,product_id,variant_id);
+    public Response getProductFlow(@PathParam("product_id") int product_id, @PathParam("variant_id") int variant_id) {
+        ProductFlowResponse result = service.getProductFlowByProductAndVariantId(shopId, branchId, product_id, variant_id);
+        return Response.ok(result).build();
     }
 
     @Path("/low_stock/{threshold_value}")
     @GET
-    public List<LowStockProductResponse> getProductLowStock(@PathParam("threshold_value") int thresholdValue) {
-        ProductFlowService service = new ProductFlowService();
-        return service.getLowStockProducts(shopId, branchId,thresholdValue);
+    public Response getProductLowStock(@PathParam("threshold_value") int thresholdValue) {
+        List<LowStockProductResponse> result = service.getLowStockProducts(shopId, branchId, thresholdValue);
+        return Response.ok(result).build();
     }
 
     @Path("/top_selling_product")
     @GET
-    public TopProductResponse getTopSellingProduct() {
-        ProductFlowService service = new ProductFlowService();
-        return service.getTopSellingProduct(shopId, branchId);
+    public Response getTopSellingProduct() {
+        TopProductResponse result = service.getTopSellingProduct(shopId, branchId);
+        return Response.ok(result).build();
     }
 
 }

@@ -3,8 +3,10 @@ package com.zs.stockmanagement.sale.resource;
 import com.zs.stockmanagement.sale.dto.AddRequestSale;
 import com.zs.stockmanagement.sale.model.Sale;
 import com.zs.stockmanagement.sale.service.SalesService;
+import com.zs.stockmanagement.shop.dto.ResponseBranch;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import java.util.List;
 
@@ -33,8 +35,11 @@ public class SaleResource {
     }
 
     @POST
-    public Sale addSale(AddRequestSale sale) {
-        return salesService.addSale(shopId, branchId, sale);
+    public Response addSale(AddRequestSale sale) {
+
+        Sale resultSale = salesService.addSale(shopId, branchId, sale);
+        return Response.ok(resultSale).build();
+
     }
 
     @DELETE

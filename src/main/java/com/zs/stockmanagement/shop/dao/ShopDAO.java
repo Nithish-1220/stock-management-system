@@ -1,7 +1,8 @@
 package com.zs.stockmanagement.shop.dao;
 
-import com.zs.stockmanagement.address.dao.dao;
+import com.zs.stockmanagement.address.dao.AddressDAO;
 import com.zs.stockmanagement.address.model.Address;
+import com.zs.stockmanagement.exceptions.DataBaseException;
 import com.zs.stockmanagement.shop.model.Branch;
 import com.zs.stockmanagement.shop.model.Shop;
 import com.zs.stockmanagement.utils.DBController;
@@ -15,10 +16,10 @@ import java.util.List;
 
 public class ShopDAO {
 
-    private dao.AddressDAO addressDAO;
+    private AddressDAO addressDAO;
 
     public ShopDAO() {
-        addressDAO = new dao.AddressDAO();
+        addressDAO = new AddressDAO();
     }
 
     public List<Shop> getShops() {
@@ -37,8 +38,7 @@ public class ShopDAO {
             }
             return shops;
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -58,8 +58,7 @@ public class ShopDAO {
                 return shop;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -99,8 +98,7 @@ public class ShopDAO {
                 return branches;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -139,14 +137,12 @@ public class ShopDAO {
                 return branch;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
     public Shop addShop(Shop shop, Branch branch) {
-        System.out.println("---------------------");
-        int stateId = addressDAO.getSateIdByName(branch.getAddress().getStateName());
+        int stateId = addressDAO.getStateIdByName(branch.getAddress().getStateName());
         int countryId = addressDAO.getCountryIdByName(branch.getAddress().getCountryName());
         int pincodeId = addressDAO.getPincodeIdByPincodeNumber(branch.getAddress().getPincode());
         int addressId = addressDAO.addAddress(branch.getAddress().getDoorNumber(),
@@ -197,15 +193,13 @@ public class ShopDAO {
 
             } catch (SQLException e) {
                 connection.rollback();
-                System.err.println(e.getMessage());
-                return null;
+                throw new DataBaseException(e.getMessage());
             } finally {
                 connection.setAutoCommit(true);
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -249,20 +243,18 @@ public class ShopDAO {
 
             } catch (SQLException e) {
                 connection.rollback();
-                System.err.println(e.getMessage());
-                return false;
+                throw new DataBaseException(e.getMessage());
             } finally {
                 connection.setAutoCommit(true);
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return false;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
     public Branch addBranch(int shopId, Branch branch) {
-        int stateId = addressDAO.getSateIdByName(branch.getAddress().getStateName());
+        int stateId = addressDAO.getStateIdByName(branch.getAddress().getStateName());
         int countryId = addressDAO.getCountryIdByName(branch.getAddress().getCountryName());
         int pincodeId = addressDAO.getPincodeIdByPincodeNumber(branch.getAddress().getPincode());
 
@@ -302,8 +294,7 @@ public class ShopDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -348,15 +339,13 @@ public class ShopDAO {
 
             } catch (SQLException e) {
                 connection.rollback();
-                System.err.println(e.getMessage());
-                return false;
+                throw new DataBaseException(e.getMessage());
             } finally {
                 connection.setAutoCommit(true);
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return false;
+            throw new DataBaseException(e.getMessage());
         }
     }
 }

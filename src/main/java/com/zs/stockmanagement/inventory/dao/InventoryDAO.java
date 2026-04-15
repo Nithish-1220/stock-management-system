@@ -1,5 +1,6 @@
 package com.zs.stockmanagement.inventory.dao;
 
+import com.zs.stockmanagement.exceptions.DataBaseException;
 import com.zs.stockmanagement.inventory.model.Stock;
 import com.zs.stockmanagement.utils.DBController;
 
@@ -33,8 +34,7 @@ public class InventoryDAO {
                 return inventory;
             }
         } catch (SQLException e) {
-            System.err.println("Error fetching stocks------->" + e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -67,8 +67,7 @@ public class InventoryDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error fetching stock by variant ---> " + e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 }

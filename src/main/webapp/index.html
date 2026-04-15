@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        header {
+            background-color: #302f2f;
+            color: #fff;
+            padding: 20px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Stock Management System</h1>
+        <p>Streamline Your Stock</p>
+    </header>
+    <main>
+        <div class="shops">
+
+        </div>
+        <hr>
+        <div class="branches">
+
+        </div>
+        <hr>
+         <div class="products">
+
+        </div>
+    </main>
+    <footer>
+
+    </footer>
+    <script src="printData.js"></script>
+    <script>
+
+        function getShops() {
+            fetch("http://localhost:8080/stock-management-system/api/shops")
+                .then(response => response.json())
+                .then(data => {
+                    const shops = document.getElementsByClassName("shops")[0];
+                    shops.innerHTML = "";
+                    const table = createTable(data,"View Branches",getBranches);
+                    shops.appendChild(table);
+                });
+        }
+
+        function getBranches(shopId) {
+                fetch(`http://localhost:8080/stock-management-system/api/shops/${shopId}/branches`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const branches = document.getElementsByClassName("branches")[0];
+                        branches.innerHTML = "";
+                        const table = createTable(data,"View Products",getProducts(shopId,7));
+                        branches.appendChild(table);
+                    });
+        }
+
+        function getProducts(shopId,branchId) {
+
+                fetch(`http://localhost:8080/stock-management-system/api/shops/${shopId}/branches/${branchId}/products`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const products = document.getElementsByClassName("products")[0];
+                        products.innerHTML = "";
+                        const table = createTable(data,"View Variants");
+                        products.appendChild(table);
+                    });
+        }
+        getShops();
+    
+    </script>
+
+</body>
+
+</html>

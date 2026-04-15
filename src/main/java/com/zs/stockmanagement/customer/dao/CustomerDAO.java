@@ -1,6 +1,7 @@
 package com.zs.stockmanagement.customer.dao;
 
 import com.zs.stockmanagement.customer.model.Customer;
+import com.zs.stockmanagement.exceptions.DataBaseException;
 import com.zs.stockmanagement.utils.DBController;
 
 import java.sql.Connection;
@@ -68,8 +69,7 @@ public class CustomerDAO {
                 return customer;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -113,8 +113,7 @@ public class CustomerDAO {
             return customer;
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -187,13 +186,13 @@ public class CustomerDAO {
 
             } catch (SQLException e) {
                 connection.rollback();
-                throw new RuntimeException("error while updating customer");
+                throw new DataBaseException(e.getMessage());
             } finally {
                 connection.setAutoCommit(true);
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException("error while updating customer");
+            throw new DataBaseException(e.getMessage());
         }
     }
 }

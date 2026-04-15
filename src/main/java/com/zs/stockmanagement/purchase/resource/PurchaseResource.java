@@ -41,6 +41,7 @@ public class PurchaseResource {
     @DELETE
     @Path("/{purchase_id}")
     public boolean deletePurchase(@PathParam("purchase_id") int purchaseId){
+        System.out.println("delete purchase in resourse");
         return purchaseService.deletePurchase(shopId,branchId,purchaseId);
     }
 

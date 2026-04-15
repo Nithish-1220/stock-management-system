@@ -1,25 +1,29 @@
 package com.zs.stockmanagement.product.dao;
 
+import com.zs.stockmanagement.exceptions.BadRequestException;
+import com.zs.stockmanagement.exceptions.ConflictException;
+import com.zs.stockmanagement.exceptions.DataBaseException;
+import com.zs.stockmanagement.exceptions.ResourceNotFoundException;
 import com.zs.stockmanagement.product.model.Product;
 import com.zs.stockmanagement.product.model.Variant;
 import com.zs.stockmanagement.utils.DBController;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ProductDAO {
 
     public List<Product> getProducts(int shopId, int branchId) {
-        String productQuery = "select p.product_id,p.product_name,c.category_name,b2.brand_name,p.model " +
-                "From products p " +
-                "Left join branches b on b.branch_id = p.branch_id " +
-                "left join categories c on p.category_id = c.category_id " +
-                "left join brand b2 on p.brand_id = b2.brand_id " +
-                "WHERE b.shop_id = ? AND p.branch_id = ? AND is_deleted = FALSE;";
+
+        String productQuery = """
+                select p.product_id,p.product_name,c.category_name,b2.brand_name,p.model 
+                From products p  
+                Left join branches b on b.branch_id = p.branch_id
+                left join categories c on p.category_id = c.category_id 
+                left join brand b2 on p.brand_id = b2.brand_id 
+                WHERE b.shop_id = ? AND p.branch_id = ? AND is_deleted = FALSE;
+                """;
 
         try (Connection connection = DBController.getConnection();
              PreparedStatement productPs = connection.prepareStatement(productQuery)) {
@@ -69,27 +73,32 @@ public class ProductDAO {
                     product.setCategoryName(productRs.getString("category_name"));
                     product.setBrandName(productRs.getString("brand_name"));
                     product.setModel(productRs.getString("model"));
+                } else {
+                    throw new ResourceNotFoundException("product not found");
                 }
                 return product;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
 
     public List<Variant> getVariants(int shopId, int branchId, int productId) {
-        String variantQuery = "select v.variant_id, v.price, v.mrp " +
-                "from variants v " +
-                "join products p on  v.product_id = p.product_id " +
-                "join branches b on p.branch_id = b.branch_id " +
-                "where b.shop_id=? AND b.branch_id = ? AND p.product_id=? AND v.is_deleted = false;";
+        String variantQuery = """
+                select v.variant_id, v.price, v.mrp
+                            from variants v
+                            join products p on  v.product_id = p.product_id
+                            join branches b on p.branch_id = b.branch_id
+                            where b.shop_id=? AND b.branch_id = ? AND p.product_id=? AND v.is_deleted = false;
+                """;
 
-        String attributeQuery = "select a.attribute_key,va.attribute_value " +
-                "from variant_attribute va " +
-                "left join attribute a on va.attribute_id = a.attribute_id " +
-                "where variant_id = ? ;";
+        String attributeQuery = """
+                select a.attribute_key,va.attribute_value
+                from variant_attribute va
+                left join attribute a on va.attribute_id = a.attribute_id
+                where variant_id = ? ;
+                """;
 
         try (Connection connection = DBController.getConnection();
              PreparedStatement variantPs = connection.prepareStatement(variantQuery);
@@ -158,12 +167,13 @@ public class ProductDAO {
                             variant.getAttributes().put(attributeRs.getString("attribute_key"), attributeRs.getString("attribute_value"));
                         }
                     }
+                } else {
+                    throw new ResourceNotFoundException("variant not found");
                 }
                 return variant;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -176,12 +186,12 @@ public class ProductDAO {
             try (ResultSet categoryRs = categoryPs.executeQuery()) {
                 if (categoryRs.next()) {
                     return categoryRs.getInt("category_id");
+                } else {
+                    throw new ResourceNotFoundException("category not found");
                 }
-                return -1;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return -1;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -194,12 +204,12 @@ public class ProductDAO {
             try (ResultSet brandRs = brandPs.executeQuery()) {
                 if (brandRs.next()) {
                     return brandRs.getInt("brand_id");
+                } else {
+                   return -1;
                 }
-                return -1;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return -1;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -216,9 +226,13 @@ public class ProductDAO {
                 }
                 return -1;
             }
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (e.getErrorCode() == 1062) {
+                throw new ConflictException("resource already exist");
+            }
+            throw new ConflictException(e.getMessage());
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return -1;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -235,8 +249,7 @@ public class ProductDAO {
                 return -1;
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return -1;
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -250,12 +263,18 @@ public class ProductDAO {
             try (ResultSet attributeRs = attributePs.getGeneratedKeys()) {
                 if (attributeRs.next()) {
                     return attributeRs.getInt(1);
+                } else {
+                    throw new DataBaseException("Unexpected error while creating brand");
                 }
-                return -1;
             }
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (e.getErrorCode() == 1062) {
+                throw new ConflictException("resource already exist");
+            }
+            throw new ConflictException(e.getMessage());
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return -1;
+
+            throw new DataBaseException(e.getMessage());
         }
     }
 
@@ -263,28 +282,27 @@ public class ProductDAO {
     public Product addProduct(int shopId, int branchId, Product product, List<Variant> variants) {
 
         String checkShopQuery = "select shop_id from branches where branch_id=?;";
-        String productQuery = "insert into products(branch_id,product_name,category_id,brand_id,model) values(?,?,?,?,?);";
+        String productQuery = """
+                insert into products(branch_id,product_name,category_id,brand_id,model) values(?,?,?,?,?);
+                """;
         String variantInsert = "insert into variants(product_id, price, mrp) values(?,?,?)";
         String variantAttributeInsert = "insert into variant_attribute(variant_id, attribute_id, attribute_value) VALUES (?,?,?);";
 
         int categoryId = getCategoryId(product.getCategoryName());
-        if (categoryId == -1) return null;
         int existingBrandId = getBrandId(product.getBrandName());
         int brandId = existingBrandId != -1 ? existingBrandId : addBrand(product.getBrandName());
 
         Integer productId = null;
-
-        try (Connection connection = DBController.getConnection()) {
-            connection.setAutoCommit(false); // Start transaction
-
-            try {
-                try (PreparedStatement checkShopPs = connection.prepareStatement(checkShopQuery)) {
-                    checkShopPs.setInt(1, branchId);
-                    try (ResultSet checkShopRs = checkShopPs.executeQuery()) {
-                        if (!checkShopRs.next() || checkShopRs.getInt("shop_id") != shopId) {
-                            connection.rollback();
-                            return null;
-                        }
+        Connection connection = null;
+        try {
+            connection = DBController.getConnection();
+            try (PreparedStatement checkShopPs = connection.prepareStatement(checkShopQuery)) {
+                connection.setAutoCommit(false);
+                checkShopPs.setInt(1, branchId);
+                try (ResultSet checkShopRs = checkShopPs.executeQuery()) {
+                    if (!checkShopRs.next() || checkShopRs.getInt("shop_id") != shopId) {
+                        connection.rollback();
+                        throw new ResourceNotFoundException("product not found for these inputs");
                     }
                 }
 
@@ -300,7 +318,7 @@ public class ProductDAO {
                         if (productRs.next()) {
                             productId = productRs.getInt(1);
                         } else {
-                            throw new SQLException("Failed to generate Product ID");
+                            throw new DataBaseException("Unable to create product");
                         }
                     }
                 }
@@ -335,18 +353,39 @@ public class ProductDAO {
                 connection.commit();
                 product.setProductId(productId);
                 return product;
-
-            } catch (SQLException e) {
-                connection.rollback();
-                System.err.println(e.getMessage());
-                return null;
-            } finally {
-                connection.setAutoCommit(true);
             }
-
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                } catch (SQLException ignored) {
+                }
+            }
+            switch (e.getErrorCode()) {
+                case 1062:
+                    throw new ConflictException("Resource already exists");
+                case 1452:
+                    throw new BadRequestException("Invalid reference value");
+                case 1451:
+                    throw new ConflictException("Cannot delete. Resource in use");
+                default:
+                    throw new DataBaseException("Constraint violation");
+            }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            try {
+                connection.rollback();
+                throw new DataBaseException(e.getMessage());
+            } catch (Exception ee) {
+                throw new DataBaseException(ee.getMessage());
+            }
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                } catch (SQLException ignored) {
+                }
+            }
         }
     }
 
@@ -356,25 +395,36 @@ public class ProductDAO {
     }
 
     public boolean deleteProduct(int shopId, int branchId, int productId) {
-        String productQuery = "UPDATE products p join branches b on p.branch_id = b.branch_id " +
-                "SET is_deleted = TRUE " +
-                "WHERE p.product_id = ? AND p.branch_id = ? AND b.shop_id = ?;";
+
+        String productQuery = """
+                        UPDATE products p
+                        JOIN branches b ON p.branch_id = b.branch_id
+                        SET p.is_deleted = TRUE
+                        WHERE p.product_id = ? AND p.branch_id = ? AND b.shop_id = ? AND p.is_deleted = FALSE;
+                        """;
 
         try (Connection connection = DBController.getConnection();
              PreparedStatement productPs = connection.prepareStatement(productQuery)) {
-
             productPs.setInt(1, productId);
             productPs.setInt(2, branchId);
             productPs.setInt(3, shopId);
-            productPs.executeUpdate();
+            int rowsAffected = productPs.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new ResourceNotFoundException("Product not found for given inputs");
+            }
             return true;
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (e.getErrorCode() == 1451) {
+                throw new ConflictException("Cannot delete. Product is in use");
+            }
+            throw new DataBaseException("Constraint violation while deleting product");
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return false;
+            throw new DataBaseException("Unable to delete product");
         }
     }
 
     public Variant addVariant(int shopId, int branchId, int productId, Variant variant) {
+
         String checkQuery =
                 "SELECT p.product_id " +
                         "FROM products p " +
@@ -383,63 +433,97 @@ public class ProductDAO {
                         "AND p.branch_id = ? " +
                         "AND b.shop_id = ? " +
                         "AND p.is_deleted = FALSE";
-        String variantQuery = "insert into variants(product_id, price, mrp) values (?,?,?);";
-        String variantAttributeQuery = "insert into variant_attribute(variant_id, attribute_id, attribute_value) values (?,?,?);";
 
-        try (Connection connection = DBController.getConnection()) {
+        String variantQuery =
+                "INSERT INTO variants(product_id, price, mrp) VALUES (?,?,?)";
+
+        String variantAttributeQuery =
+                "INSERT INTO variant_attribute(variant_id, attribute_id, attribute_value) VALUES (?,?,?)";
+
+        Connection connection = null;
+
+        try {
+            connection = DBController.getConnection();
             connection.setAutoCommit(false);
 
-            try {
-                try (PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
-                    checkPs.setInt(1, productId);
-                    checkPs.setInt(2, branchId);
-                    checkPs.setInt(3, shopId);
-                    try (ResultSet rs = checkPs.executeQuery()) {
-                        if (!rs.next()) {
-                            connection.rollback();
-                            return null;
-                        }
+            try (PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
+                checkPs.setInt(1, productId);
+                checkPs.setInt(2, branchId);
+                checkPs.setInt(3, shopId);
+
+                try (ResultSet rs = checkPs.executeQuery()) {
+                    if (!rs.next()) {
+                        throw new ResourceNotFoundException("Product not found for given inputs");
                     }
                 }
-
-                try (PreparedStatement variantPs = connection.prepareStatement(variantQuery, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                    variantPs.setInt(1, productId);
-                    variantPs.setDouble(2, variant.getPrice());
-                    variantPs.setDouble(3, variant.getMrp());
-                    variantPs.executeUpdate();
-
-                    try (ResultSet variantRs = variantPs.getGeneratedKeys()) {
-                        if (variantRs.next()) variant.setVariantId(variantRs.getInt(1));
-                    }
-                }
-
-                try (PreparedStatement variantAttributePs = connection.prepareStatement(variantAttributeQuery)) {
-                    variantAttributePs.setInt(1, variant.getVariantId());
-
-                    for (String attributeKey : variant.getAttributes().keySet()) {
-                        int existingAttributeId = getAttributeId(attributeKey);
-                        int attributeId = existingAttributeId != -1 ? existingAttributeId : addAttribute(attributeKey);
-
-                        variantAttributePs.setInt(2, attributeId);
-                        variantAttributePs.setString(3, variant.getAttributes().get(attributeKey));
-                        variantAttributePs.executeUpdate();
-                    }
-                }
-
-                connection.commit();
-                return variant;
-
-            } catch (SQLException e) {
-                connection.rollback();
-                System.err.println(e.getMessage());
-                return null;
-            } finally {
-                connection.setAutoCommit(true);
             }
 
+            try (PreparedStatement variantPs =
+                         connection.prepareStatement(variantQuery, PreparedStatement.RETURN_GENERATED_KEYS)) {
+
+                variantPs.setInt(1, productId);
+                variantPs.setDouble(2, variant.getPrice());
+                variantPs.setDouble(3, variant.getMrp());
+
+                int rows = variantPs.executeUpdate();
+                if (rows == 0) {
+                    throw new DataBaseException("Unable to create variant");
+                }
+
+                try (ResultSet variantRs = variantPs.getGeneratedKeys()) {
+                    if (variantRs.next()) {
+                        variant.setVariantId(variantRs.getInt(1));
+                    } else {
+                        throw new DataBaseException("Variant ID generation failed");
+                    }
+                }
+            }
+            try (PreparedStatement variantAttributePs =
+                         connection.prepareStatement(variantAttributeQuery)) {
+
+                variantAttributePs.setInt(1, variant.getVariantId());
+
+                for (String attributeKey : variant.getAttributes().keySet()) {
+
+                    int existingAttributeId = getAttributeId(attributeKey);
+                    int attributeId = existingAttributeId != -1
+                            ? existingAttributeId
+                            : addAttribute(attributeKey);
+
+                    variantAttributePs.setInt(2, attributeId);
+                    variantAttributePs.setString(3,
+                            variant.getAttributes().get(attributeKey));
+
+                    variantAttributePs.executeUpdate();
+                }
+            }
+
+            connection.commit();
+            return variant;
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (connection != null) {
+                try { connection.rollback(); } catch (SQLException ignored) {}
+            }
+            switch (e.getErrorCode()) {
+                case 1062:
+                    throw new ConflictException("Variant already exists");
+                case 1452:
+                    throw new BadRequestException("Invalid reference value");
+                default:
+                    throw new DataBaseException("Constraint violation while creating variant");
+            }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+            if (connection != null) {
+                try { connection.rollback(); } catch (SQLException ignored) {}
+            }
+            throw new DataBaseException("Unable to create variant");
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                } catch (SQLException ignored) {}
+            }
         }
     }
 
@@ -447,26 +531,41 @@ public class ProductDAO {
     public List<Variant> addVariant() {
         return null;
     }
-
     public boolean deleteVariant(int shopId, int branchId, int productId, int variantId) {
-        String productQuery = "update variants v " +
-                "join products p on p.product_id = v.product_id " +
-                "join branches b on p.branch_id = b.branch_id " +
-                "Set v.is_deleted = true " +
-                "where v.variant_id = ? AND v.product_id =? AND p.branch_id = ? AND b.shop_id =? ;";
+
+        String query =
+                "UPDATE variants v " +
+                        "JOIN products p ON p.product_id = v.product_id " +
+                        "JOIN branches b ON p.branch_id = b.branch_id " +
+                        "SET v.is_deleted = TRUE " +
+                        "WHERE v.variant_id = ? " +
+                        "AND v.product_id = ? " +
+                        "AND p.branch_id = ? " +
+                        "AND b.shop_id = ? " +
+                        "AND v.is_deleted = FALSE";
 
         try (Connection connection = DBController.getConnection();
-             PreparedStatement variantPs = connection.prepareStatement(productQuery)) {
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
-            variantPs.setInt(1, variantId);
-            variantPs.setInt(2, productId);
-            variantPs.setInt(3, branchId);
-            variantPs.setInt(4, shopId);
-            variantPs.executeUpdate();
+            ps.setInt(1, variantId);
+            ps.setInt(2, productId);
+            ps.setInt(3, branchId);
+            ps.setInt(4, shopId);
+
+            int rowsAffected = ps.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new ResourceNotFoundException("Variant not found for given inputs");
+            }
+
             return true;
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (e.getErrorCode() == 1451) {
+                throw new ConflictException("Cannot delete. Variant is in use");
+            }
+            throw new DataBaseException("Constraint violation while deleting variant");
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return false;
+            throw new DataBaseException("Unable to delete variant");
         }
     }
 
@@ -474,176 +573,216 @@ public class ProductDAO {
     public Product updateProduct(int shopId, int branchId, int productId, Product product) {
 
         String checkQuery =
-                "select p.product_id from products p " +
-                        "join branches b on p.branch_id = b.branch_id " +
-                        "where p.product_id=? AND p.branch_id=? AND b.shop_id=? AND p.is_deleted=false;";
+                "SELECT p.product_id FROM products p " +
+                        "JOIN branches b ON p.branch_id = b.branch_id " +
+                        "WHERE p.product_id=? AND p.branch_id=? AND b.shop_id=? AND p.is_deleted=false;";
 
-        try (Connection connection = DBController.getConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DBController.getConnection();
             connection.setAutoCommit(false);
 
-            try {
-                try (PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
-                    checkPs.setInt(1, productId);
-                    checkPs.setInt(2, branchId);
-                    checkPs.setInt(3, shopId);
+            try (PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
 
-                    try (ResultSet checkRs = checkPs.executeQuery()) {
-                        if (!checkRs.next()) {
-                            connection.rollback();
-                            return null;
-                        }
+                checkPs.setInt(1, productId);
+                checkPs.setInt(2, branchId);
+                checkPs.setInt(3, shopId);
+
+                try (ResultSet checkRs = checkPs.executeQuery()) {
+                    if (!checkRs.next()) {
+                        throw new ResourceNotFoundException("Product not found for given inputs");
                     }
                 }
+            }
 
-                StringBuilder updateQuery = new StringBuilder("update products set ");
-                List<Object> params = new ArrayList<>();
+            StringBuilder updateQuery = new StringBuilder("UPDATE products SET ");
+            List<Object> params = new ArrayList<>();
 
-                if (product.getProductName() != null) {
-                    updateQuery.append("product_name=?,");
-                    params.add(product.getProductName());
+            if (product.getProductName() != null) {
+                updateQuery.append("product_name=?,");
+                params.add(product.getProductName());
+            }
+
+            if (product.getCategoryName() != null) {
+                int categoryId = getCategoryId(product.getCategoryName());
+                if (categoryId == -1) {
+                    throw new BadRequestException("Invalid category name");
+                }
+                updateQuery.append("category_id=?,");
+                params.add(categoryId);
+            }
+
+            if (product.getBrandName() != null) {
+                int brandId = getBrandId(product.getBrandName());
+                if (brandId == -1) {
+                    throw new BadRequestException("Invalid brand name");
+                }
+                updateQuery.append("brand_id=?,");
+                params.add(brandId);
+            }
+
+            if (product.getModel() != null) {
+                updateQuery.append("model=?,");
+                params.add(product.getModel());
+            }
+
+            if (params.isEmpty()) {
+                throw new BadRequestException("No fields provided for update");
+            }
+
+            updateQuery.deleteCharAt(updateQuery.length() - 1);
+            updateQuery.append(" WHERE product_id=? AND branch_id=? AND is_deleted=false;");
+
+            params.add(productId);
+            params.add(branchId);
+
+            try (PreparedStatement updatePs = connection.prepareStatement(updateQuery.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    updatePs.setObject(i + 1, params.get(i));
                 }
 
-                if (product.getCategoryName() != null) {
-                    int categoryId = getCategoryId(product.getCategoryName());
-                    if (categoryId == -1) {
-                        connection.rollback();
-                        return null;
-                    }
-                    updateQuery.append("category_id=?,");
-                    params.add(categoryId);
+                int rowsAffected = updatePs.executeUpdate();
+                if (rowsAffected == 0) {
+                    throw new ResourceNotFoundException("Product not found or already deleted");
                 }
+            }
 
-                if (product.getBrandName() != null) {
-                    int brandId = getBrandId(product.getBrandName());
-                    if (brandId == -1) {
-                        connection.rollback();
-                        return null;
-                    }
-                    updateQuery.append("brand_id=?,");
-                    params.add(brandId);
-                }
+            connection.commit();
+            return getProducts(shopId, branchId, productId);
 
-                if (product.getModel() != null) {
-                    updateQuery.append("model=?,");
-                    params.add(product.getModel());
-                }
+        } catch (SQLIntegrityConstraintViolationException e) {
 
-                if (params.isEmpty()) {
-                    connection.rollback();
-                    return null;
-                }
+            switch (e.getErrorCode()) {
 
-                updateQuery.deleteCharAt(updateQuery.length() - 1);
-                updateQuery.append(" where product_id=? AND branch_id=? AND is_deleted=false;");
+                case 1062:
+                    throw new ConflictException("Duplicate value exists");
 
-                params.add(productId);
-                params.add(branchId);
+                case 1452:
+                    throw new BadRequestException("Invalid reference value");
 
-                try (PreparedStatement updatePs = connection.prepareStatement(updateQuery.toString())) {
-                    for (int i = 0; i < params.size(); i++) {
-                        updatePs.setObject(i + 1, params.get(i));
-                    }
-
-                    int rowsAffected = updatePs.executeUpdate();
-                    if (rowsAffected == 0) {
-                        connection.rollback();
-                        return null;
-                    }
-                }
-
-                connection.commit();
-                return getProducts(shopId, branchId, productId);
-
-            } catch (SQLException e) {
-                connection.rollback();
-                System.err.println(e.getMessage());
-                return null;
-            } finally {
-                connection.setAutoCommit(true);
+                default:
+                    throw new DataBaseException("Constraint violation");
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+
+            try {
+                if (connection != null) connection.rollback();
+            } catch (SQLException ignored) {}
+
+            throw new DataBaseException("Unable to update product");
+
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                }
+            } catch (SQLException ignored) {}
         }
     }
 
-    public Variant updateVariant(int shopId, int branchId, int productId, int variantId, Variant variant) {
+    public Variant updateVariant(int shopId,
+                                 int branchId,
+                                 int productId,
+                                 int variantId,
+                                 Variant variant) {
 
         String checkQuery =
-                "select v.variant_id from variants v " +
-                        "join products p on v.product_id = p.product_id " +
-                        "join branches b on p.branch_id = b.branch_id " +
-                        "where v.variant_id=? AND v.product_id=? AND p.branch_id=? AND b.shop_id=? AND v.is_deleted=false;";
+                "SELECT v.variant_id FROM variants v " +
+                        "JOIN products p ON v.product_id = p.product_id " +
+                        "JOIN branches b ON p.branch_id = b.branch_id " +
+                        "WHERE v.variant_id=? AND v.product_id=? " +
+                        "AND p.branch_id=? AND b.shop_id=? AND v.is_deleted=false;";
 
-        try (Connection connection = DBController.getConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DBController.getConnection();
             connection.setAutoCommit(false);
 
-            try {
-                try (PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
-                    checkPs.setInt(1, variantId);
-                    checkPs.setInt(2, productId);
-                    checkPs.setInt(3, branchId);
-                    checkPs.setInt(4, shopId);
+            try (PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
 
-                    try (ResultSet checkRs = checkPs.executeQuery()) {
-                        if (!checkRs.next()) {
-                            connection.rollback();
-                            return null;
-                        }
+                checkPs.setInt(1, variantId);
+                checkPs.setInt(2, productId);
+                checkPs.setInt(3, branchId);
+                checkPs.setInt(4, shopId);
+
+                try (ResultSet checkRs = checkPs.executeQuery()) {
+                    if (!checkRs.next()) {
+                        throw new ResourceNotFoundException("Variant not found for given inputs");
                     }
                 }
+            }
 
-                StringBuilder updateQuery = new StringBuilder("update variants set ");
-                List<Object> params = new ArrayList<>();
+            StringBuilder updateQuery = new StringBuilder("UPDATE variants SET ");
+            List<Object> params = new ArrayList<>();
 
-                if (variant.getPrice() != 0) {
-                    updateQuery.append("price=?,");
-                    params.add(variant.getPrice());
+            if (variant.getPrice() != 0) {
+                updateQuery.append("price=?,");
+                params.add(variant.getPrice());
+            }
+
+            if (variant.getMrp() != 0) {
+                updateQuery.append("mrp=?,");
+                params.add(variant.getMrp());
+            }
+
+            if (params.isEmpty()) {
+                throw new BadRequestException("No fields provided for update");
+            }
+
+            updateQuery.deleteCharAt(updateQuery.length() - 1);
+            updateQuery.append(" WHERE variant_id=? AND product_id=? AND is_deleted=false;");
+
+            params.add(variantId);
+            params.add(productId);
+
+            try (PreparedStatement updatePs = connection.prepareStatement(updateQuery.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    updatePs.setObject(i + 1, params.get(i));
                 }
 
-                if (variant.getMrp() != 0) {
-                    updateQuery.append("mrp=?,");
-                    params.add(variant.getMrp());
+                int rowsAffected = updatePs.executeUpdate();
+                if (rowsAffected == 0) {
+                    throw new ResourceNotFoundException("Variant not found or already deleted");
                 }
+            }
 
-                if (params.isEmpty()) {
-                    connection.rollback();
-                    return null;
-                }
+            connection.commit();
+            return getVariants(shopId, branchId, productId, variantId);
 
-                updateQuery.deleteCharAt(updateQuery.length() - 1);
-                updateQuery.append(" where variant_id=? AND product_id=? AND is_deleted=false;");
+        } catch (SQLIntegrityConstraintViolationException e) {
 
-                params.add(variantId);
-                params.add(productId);
+            switch (e.getErrorCode()) {
 
-                try (PreparedStatement updatePs = connection.prepareStatement(updateQuery.toString())) {
-                    for (int i = 0; i < params.size(); i++) {
-                        updatePs.setObject(i + 1, params.get(i));
-                    }
+                case 1062:
+                    throw new ConflictException("Duplicate value exists");
 
-                    int rowsAffected = updatePs.executeUpdate();
-                    if (rowsAffected == 0) {
-                        connection.rollback();
-                        return null;
-                    }
-                }
+                case 1452:
+                    throw new BadRequestException("Invalid reference value");
 
-                connection.commit();
-                return getVariants(shopId, branchId, productId, variantId);
-
-            } catch (SQLException e) {
-                connection.rollback();
-                System.err.println(e.getMessage());
-                return null;
-            } finally {
-                connection.setAutoCommit(true);
+                default:
+                    throw new DataBaseException("Constraint violation");
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
-            return null;
+
+            try {
+                if (connection != null) connection.rollback();
+            } catch (SQLException ignored) {}
+
+            throw new DataBaseException("Unable to update variant");
+
+        } finally {
+
+            try {
+                if (connection != null) {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                }
+            } catch (SQLException ignored) {}
         }
     }
 }
